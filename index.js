@@ -12,7 +12,7 @@ const ELEVENLABS_API_KEY = "sk_c68443d5e9d5c33712245a1f23998fc2f11a5ffd239e226e"
 
 if (!ELEVENLABS_API_KEY) {
   console.error("Error: ELEVENLABS_API_KEY is not set.");
-  process.exit(1); // Exit if no API key is provided
+  process.exit(1);
 }
 
 const client = new ElevenLabsClient({
@@ -29,8 +29,8 @@ const createAudioFileFromText = async (text) => {
   return new Promise(async (resolve, reject) => {
     try {
       const audio = await client.generate({
-        voice: "Rachel",
-        model_id: "eleven_turbo_v2_5",
+        voice: "Rachel", // Make sure "Rachel" is a valid voice ID in ElevenLabs
+        model_id: "eleven_turbo_v2_5", // Double-check this model ID
         text,
       });
 
@@ -45,7 +45,7 @@ const createAudioFileFromText = async (text) => {
         reject(new Error("Error writing audio file."));
       });
     } catch (error) {
-      console.error("Error generating audio:", error);
+      console.error("Error generating audio:", error.response?.data || error.message);
       reject(new Error("Error generating audio. Please try again later."));
     }
   });
@@ -79,7 +79,7 @@ app.get("/textspeech", async (req, res) => {
       res.status(500).json({ error: "Error streaming audio file." });
     });
   } catch (error) {
-    console.error("Failed to generate audio:", error);
+    console.error("Failed to generate audio:", error.message);
     res.status(500).json({ error: "Failed to generate audio", details: error.message });
   }
 });
