@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text-to-Speech Website</title>
+    <style>
+        /* CSS for basic styling */
+        body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-image: url('https://i.imgur.com/BkzX7fQ.jpeg'); /* Add your image URL here */
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+        .hamburger-icon {
+            font-size: 24px;
+            cursor: pointer;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+        }
+        .menu {
+            display: none;
+            position: fixed;
+            top: 60px;
+            left: 20px;
+            background-color: #333;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            width: 150px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .menu a {
+            color: white;
+            text-decoration: none;
+            display: block;
+            padding: 8px 0;
+        }
+        .menu a:hover {
+            background-color: #555;
+        }
+        section {
+            text-align: center;
+            margin-top: 100px;
+            padding: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        .content input[type="text"] {
+            width: 80%;
+            max-width: 400px;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .content button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .content button:hover {
+            background-color: #0056b3;
+        }
+        audio {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Hamburger Icon -->
+    <div class="hamburger-icon" onclick="toggleMenu()">☰</div>
+
+    <!-- Hamburger Menu -->
+    <div class="menu" id="menu">
+        <a href="#home" onclick="showSection('home')">Home</a>
+        <a href="#about" onclick="showSection('about')">About</a>
+        <a href="#projects" onclick="showSection('projects')">Projects</a>
+        <a href="#tts" onclick="showSection('tts')">Text to Speech</a>
+        <a href="#contact" onclick="showSection('contact')">Contact</a>
+    </div>
+
+    <!-- Sections for each menu item -->
+    <section id="home">
+        <h1>Home Section</h1>
+        <p>Welcome to our Text-to-Speech website! Here, you can explore our projects, learn more about us, and use our text-to-speech tools.</p>
+        <p>Use the menu to navigate to different sections.</p>
+    </section>
+    
+    <section id="about" class="hidden">
+        <h1>About Section</h1>
+        <p>We are dedicated to creating accessible and interactive tools for converting text into speech. Our mission is to bridge the gap between technology and accessibility.</p>
+    </section>
+    
+    <section id="projects" class="hidden">
+        <h1>Projects Section</h1>
+        <p>Explore our various projects related to speech synthesis and text processing.</p>
+    </section>
+
+    <section id="tts" class="content hidden">
+        <h1>Text to Speech</h1>
+        <input type="text" id="text-input" placeholder="Enter text">
+        <button onclick="speakText()">Speak</button>
+        <button onclick="generateAudio()">Generate Audio</button>
+        <audio id="audioPlayer" controls style="display: none;"></audio>
+    </section>
+
+    <section id="contact" class="hidden">
+        <h1>Contact Section</h1>
+        <p>Contact us at support@example.com for more information or assistance.</p>
+    </section>
+
+    <script>
+        // JavaScript for menu toggle and Text-to-Speech
+        function toggleMenu() {
+            const menu = document.getElementById("menu");
+            menu.style.display = menu.style.display === "block" ? "none" : "block";
+        }
+
+        // Function to show the selected section and hide others
+        function showSection(sectionId) {
+            const sections = document.querySelectorAll("section");
+            sections.forEach(section => {
+                section.classList.add("hidden");
+            });
+            document.getElementById(sectionId).classList.remove("hidden");
+            toggleMenu(); // Hide menu after selection
+        }
+
+        // Function to speak text using the Web Speech API
+        function speakText() {
+            const text = document.getElementById("text-input").value;
+            if (text) {
+                const speech = new SpeechSynthesisUtterance(text);
+                window.speechSynthesis.speak(speech);
+            } else {
+                alert("Please enter some text.");
+            }
+        }
+
+        // Function to fetch generated audio from server and play
+        async function generateAudio() {
+            const text = document.getElementById("text-input").value;
+            if (!text) {
+                alert("Please enter some text.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`/textspeech?prompt=${encodeURIComponent(text)}`);
+                const data = await response.json();
+
+                if (data.audioUrl) {
+                    const audioPlayer = document.getElementById("audioPlayer");
+                    audioPlayer.src = data.audioUrl;
+                    audioPlayer.style.display = "block";
+                    audioPlayer.play();
+                } else {
+                    alert("Failed to generate audio. " + (data.error || ""));
+                }
+            } catch (error) {
+                alert("Error fetching audio: " + error.message);
+            }
+        }
+    </script>
+
+</body>
+</html>
