@@ -1,13 +1,13 @@
 const express = require("express");
 const { ElevenLabsClient } = require("elevenlabs");
-const { createWriteStream, unlink } = require("fs");
+const { createWriteStream, unlink, createReadStream } = require("fs");
 const { v4: uuid } = require("uuid");
 const path = require("path");
 
 const app = express();
 const PORT = 3000;
 
-// Directly set the API key here for simplicity
+// Directly set the API key here
 const ELEVENLABS_API_KEY = "sk_c68443d5e9d5c33712245a1f23998fc2f11a5ffd239e226e";
 
 if (!ELEVENLABS_API_KEY) {
@@ -60,17 +60,23 @@ app.get("/textspeech", async (req, res) => {
 
   try {
     const filePath = await createAudioFileFromText(text);
-    
+
     // Stream the audio file directly to the response
     res.setHeader("Content-Type", "audio/mpeg");
     const fileStream = createReadStream(filePath);
     fileStream.pipe(res);
 
-    // Delete the file after streaming
-    fileStream.on("end", () => {
+    // Delete the file after streaming is completed
+    fileStream.on("close", () => {
       unlink(filePath, (err) => {
         if (err) console.error("Failed to delete audio file:", err);
       });
+    });
+
+    // Error handling for the stream
+    fileStream.on("error", (streamError) => {
+      console.error("Stream error:", streamError);
+      res.status(500).json({ error: "Error streaming audio file." });
     });
   } catch (error) {
     console.error("Failed to generate audio:", error);
