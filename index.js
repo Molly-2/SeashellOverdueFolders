@@ -1,14 +1,19 @@
 const express = require("express");
 const { ElevenLabsClient } = require("elevenlabs");
-const { createWriteStream } = require("fs");
+const { createWriteStream, unlink } = require("fs");
 const { v4: uuid } = require("uuid");
 const path = require("path");
 
 const app = express();
 const PORT = 3000;
 
-// Replace with your Eleven Labs API key
+// Directly set the API key here for simplicity
 const ELEVENLABS_API_KEY = "sk_c68443d5e9d5c33712245a1f23998fc2f11a5ffd239e226e";
+
+if (!ELEVENLABS_API_KEY) {
+  console.error("Error: ELEVENLABS_API_KEY is not set.");
+  process.exit(1); // Exit if no API key is provided
+}
 
 const client = new ElevenLabsClient({
   apiKey: ELEVENLABS_API_KEY,
@@ -19,7 +24,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Function to create an audio file from text
+// Function to create an audio file from text and return the file path
 const createAudioFileFromText = async (text) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -28,20 +33,25 @@ const createAudioFileFromText = async (text) => {
         model_id: "eleven_turbo_v2_5",
         text,
       });
+
       const fileName = `${uuid()}.mp3`;
       const filePath = path.join(__dirname, "public", fileName);
       const fileStream = createWriteStream(filePath);
 
       audio.pipe(fileStream);
-      fileStream.on("finish", () => resolve(fileName));
-      fileStream.on("error", reject);
+      fileStream.on("finish", () => resolve(filePath));
+      fileStream.on("error", (streamError) => {
+        console.error("File stream error:", streamError);
+        reject(new Error("Error writing audio file."));
+      });
     } catch (error) {
-      reject(error);
+      console.error("Error generating audio:", error);
+      reject(new Error("Error generating audio. Please try again later."));
     }
   });
 };
 
-// Endpoint to generate audio and return its URL
+// Endpoint to generate audio and directly send it to the client
 app.get("/textspeech", async (req, res) => {
   const text = req.query.prompt || req.query.query;
   if (!text) {
@@ -49,15 +59,26 @@ app.get("/textspeech", async (req, res) => {
   }
 
   try {
-    const fileName = await createAudioFileFromText(text);
-    const audioUrl = `${req.protocol}://${req.get("host")}/${fileName}`;
-    res.json({ message: "Audio file created", audioUrl });
+    const filePath = await createAudioFileFromText(text);
+    
+    // Stream the audio file directly to the response
+    res.setHeader("Content-Type", "audio/mpeg");
+    const fileStream = createReadStream(filePath);
+    fileStream.pipe(res);
+
+    // Delete the file after streaming
+    fileStream.on("end", () => {
+      unlink(filePath, (err) => {
+        if (err) console.error("Failed to delete audio file:", err);
+      });
+    });
   } catch (error) {
+    console.error("Failed to generate audio:", error);
     res.status(500).json({ error: "Failed to generate audio", details: error.message });
   }
 });
 
-// Serve audio files and other static files from the "public" directory
+// Serve static files (like the HTML) from the "public" directory
 app.use(express.static("public"));
 
 // Start the server
